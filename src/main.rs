@@ -58,11 +58,6 @@ impl App {
         ]));
         let search_block = Block::default()
             .title(title.alignment(Alignment::Center))
-            .title(
-                instructions
-                    .alignment(Alignment::Center)
-                    .position(Position::Bottom),
-            )
             .borders(Borders::ALL)
             .border_set(border::PLAIN);
 
@@ -71,7 +66,17 @@ impl App {
             Style::default().fg(Color::Blue),
         ))
         .block(search_block);
+
         frame.render_widget(search_content, chunks[0]);
+
+        let branches_block = Block::default()
+            .title(
+                instructions
+                    .alignment(Alignment::Center)
+                    .position(Position::Bottom),
+            )
+            .borders(Borders::ALL)
+            .border_set(border::PLAIN);
 
         let mut visible_branches = Vec::<ListItem>::new();
         self.found_branches
@@ -84,7 +89,7 @@ impl App {
                     visible_branches.push(ListItem::new(Line::from(branch.to_string())));
                 }
             });
-        let branches = List::new(visible_branches);
+        let branches = List::new(visible_branches).block(branches_block);
 
         frame.render_widget(branches, chunks[1])
     }
