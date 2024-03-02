@@ -188,26 +188,6 @@ fn wagner_fischer(pattern: &Vec<char>, text: &Vec<char>) -> i32 {
     table[table.len() - 1] - text.len() as i32
 }
 
-// // wagner_fischer2(pattern: &Vec<char>, text: &Vec<char>) -> u32 {
-//     let mut table: Vec<Vec<u32>> = vec![(0..=text.len() as u32).collect(); pattern.len() + 1];
-//     for i in 0..=pattern.len() {
-//         table[i][0] = i as u32;
-//     }
-//     for y in 1..=pattern.len() {
-//         for x in 1..=text.len() {
-//             let cost = if pattern[y - 1] == text[x - 1] { 0 } else { 1 };
-//             table[y][x] = min(
-//                 table[y - 1][x - 1] + cost,
-//                 min(table[y][x - 1] + 1, table[y - 1][x]) + 1,
-//             );
-//         }
-//     }
-//     // for t in &table {
-//     //     println!("{:?}", t);
-//     // }
-//     table[table.len() - 1][table[0].len() - 1]
-// }
-
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     let mut current_branch = String::new();
@@ -251,51 +231,3 @@ fn main() -> io::Result<()> {
         Err(e) => Err(e),
     }
 }
-
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-
-//     #[test]
-//     fn render() {
-//         let app = App::default();
-//         let mut buf = Buffer::empty(Rect::new(0, 0, 50, 4));
-
-//         app.render(buf.area, &mut buf);
-
-//         let mut expected = Buffer::with_lines(vec![
-//             "┏━━━━━━━━━━━━━ Counter App Tutorial ━━━━━━━━━━━━━┓",
-//             "┃                    Value: 0                    ┃",
-//             "┃                                                ┃",
-//             "┗━ Decrement <Left> Increment <Right> Quit <Q> ━━┛",
-//         ]);
-//         let title_style = Style::new().bold();
-//         let counter_style = Style::new().yellow();
-//         let key_style = Style::new().blue().bold();
-//         expected.set_style(Rect::new(14, 0, 22, 1), title_style);
-//         expected.set_style(Rect::new(28, 1, 1, 1), counter_style);
-//         expected.set_style(Rect::new(13, 3, 6, 1), key_style);
-//         expected.set_style(Rect::new(30, 3, 7, 1), key_style);
-//         expected.set_style(Rect::new(43, 3, 4, 1), key_style);
-
-//         // note ratatui also has an assert_buffer_eq! macro that can be used to
-//         // compare buffers and display the differences in a more readable way
-//         assert_eq!(buf, expected);
-//     }
-
-//     #[test]
-//     fn handle_key_event() -> io::Result<()> {
-//         let mut app = App::default();
-//         app.handle_key_event(KeyCode::Right.into());
-//         assert_eq!(app.index, 1);
-
-//         app.handle_key_event(KeyCode::Left.into());
-//         assert_eq!(app.index, 0);
-
-//         let mut app = App::default();
-//         app.handle_key_event(KeyCode::Char('q').into());
-//         assert_eq!(app.exit, true);
-
-//         Ok(())
-//     }
-// }
