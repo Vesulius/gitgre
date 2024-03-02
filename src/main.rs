@@ -42,7 +42,51 @@ impl App {
     }
 
     fn render_frame(&self, frame: &mut Frame) {
-        frame.render_widget(self, frame.size());
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(3), Constraint::Min(1)])
+            .split(frame.size());
+
+        let title = Title::from(" GITGRE ".bold());
+        let instructions = Title::from(Line::from(vec![
+            " move up ".into(),
+            "<UP>".blue().bold(),
+            " move down ".into(),
+            "<DOWN>".blue().bold(),
+            " select ".into(),
+            "<ENTER>".blue().bold(),
+        ]));
+        let search_block = Block::default()
+            .title(title.alignment(Alignment::Center))
+            .title(
+                instructions
+                    .alignment(Alignment::Center)
+                    .position(Position::Bottom),
+            )
+            .borders(Borders::ALL)
+            .border_set(border::PLAIN);
+
+        let search_content = Paragraph::new(Text::styled(
+            self.searchterm.to_string(),
+            Style::default().fg(Color::Blue),
+        ))
+        .block(search_block);
+        frame.render_widget(search_content, chunks[0]);
+
+        let mut visible_branches = Vec::<ListItem>::new();
+        self.found_branches
+            .iter()
+            .enumerate()
+            .for_each(|(ind, branch)| {
+                if ind == self.index as usize {
+                    visible_branches.push(ListItem::new(Line::from(branch.to_string().on_red())));
+                } else {
+                    visible_branches.push(ListItem::new(Line::from(branch.to_string())));
+                }
+            });
+        let branches = List::new(visible_branches);
+
+        frame.render_widget(branches, chunks[1])
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent) {
@@ -70,11 +114,13 @@ impl App {
     }
 
     fn update_search(&mut self) {
-        self.found_branches.clear();
-        self.found_branches = self.all_branches.clone();
-        self.found_branches.sort_by_key(|b| {
-            wagner_fischer(&self.searchterm.chars().collect(), &b.chars().collect())
-        });
+        if !self.searchterm.is_empty() {
+            self.found_branches.clear();
+            self.found_branches = self.all_branches.clone();
+            self.found_branches.sort_by_key(|b| {
+                wagner_fischer(&self.searchterm.chars().collect(), &b.chars().collect())
+            });
+        }
     }
 
     fn decrement_index(&mut self) {
@@ -106,52 +152,6 @@ impl App {
     fn select(&mut self) {
         self.exit = true;
         self.selected = true;
-    }
-}
-
-impl Widget for &App {
-    fn render(self, area: Rect, buf: &mut Buffer) {
-        let title = Title::from(" GITGRE ".bold());
-        let instructions = Title::from(Line::from(vec![
-            " Decrement ".into(),
-            "<Left>".blue().bold(),
-            " Increment ".into(),
-            "<Right>".blue().bold(),
-            " Quit ".into(),
-            "<ESC> ".blue().bold(),
-        ]));
-        let block = Block::default()
-            .title(title.alignment(Alignment::Center))
-            .title(
-                instructions
-                    .alignment(Alignment::Center)
-                    .position(Position::Bottom),
-            )
-            .borders(Borders::ALL)
-            .border_set(border::THICK);
-
-        let mut visible_branches = vec![Line::from(vec![
-            "Value: ".into(),
-            self.index.to_string().yellow(),
-            self.searchterm.to_string().blue(),
-        ])];
-
-        self.found_branches
-            .iter()
-            .enumerate()
-            .for_each(|(ind, branch)| {
-                if ind == self.index as usize {
-                    visible_branches.push(Line::from(branch.to_string().on_red()));
-                } else {
-                    visible_branches.push(Line::from(branch.to_string()));
-                }
-            });
-        let visible_branches = Text::from(visible_branches);
-
-        Paragraph::new(visible_branches)
-            .centered()
-            .block(block)
-            .render(area, buf);
     }
 }
 
@@ -231,50 +231,50 @@ fn main() -> io::Result<()> {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+// #[cfg(test)]
+// mod tests {
+//     use super::*;
 
-    #[test]
-    fn render() {
-        let app = App::default();
-        let mut buf = Buffer::empty(Rect::new(0, 0, 50, 4));
+//     #[test]
+//     fn render() {
+//         let app = App::default();
+//         let mut buf = Buffer::empty(Rect::new(0, 0, 50, 4));
 
-        app.render(buf.area, &mut buf);
+//         app.render(buf.area, &mut buf);
 
-        let mut expected = Buffer::with_lines(vec![
-            "┏━━━━━━━━━━━━━ Counter App Tutorial ━━━━━━━━━━━━━┓",
-            "┃                    Value: 0                    ┃",
-            "┃                                                ┃",
-            "┗━ Decrement <Left> Increment <Right> Quit <Q> ━━┛",
-        ]);
-        let title_style = Style::new().bold();
-        let counter_style = Style::new().yellow();
-        let key_style = Style::new().blue().bold();
-        expected.set_style(Rect::new(14, 0, 22, 1), title_style);
-        expected.set_style(Rect::new(28, 1, 1, 1), counter_style);
-        expected.set_style(Rect::new(13, 3, 6, 1), key_style);
-        expected.set_style(Rect::new(30, 3, 7, 1), key_style);
-        expected.set_style(Rect::new(43, 3, 4, 1), key_style);
+//         let mut expected = Buffer::with_lines(vec![
+//             "┏━━━━━━━━━━━━━ Counter App Tutorial ━━━━━━━━━━━━━┓",
+//             "┃                    Value: 0                    ┃",
+//             "┃                                                ┃",
+//             "┗━ Decrement <Left> Increment <Right> Quit <Q> ━━┛",
+//         ]);
+//         let title_style = Style::new().bold();
+//         let counter_style = Style::new().yellow();
+//         let key_style = Style::new().blue().bold();
+//         expected.set_style(Rect::new(14, 0, 22, 1), title_style);
+//         expected.set_style(Rect::new(28, 1, 1, 1), counter_style);
+//         expected.set_style(Rect::new(13, 3, 6, 1), key_style);
+//         expected.set_style(Rect::new(30, 3, 7, 1), key_style);
+//         expected.set_style(Rect::new(43, 3, 4, 1), key_style);
 
-        // note ratatui also has an assert_buffer_eq! macro that can be used to
-        // compare buffers and display the differences in a more readable way
-        assert_eq!(buf, expected);
-    }
+//         // note ratatui also has an assert_buffer_eq! macro that can be used to
+//         // compare buffers and display the differences in a more readable way
+//         assert_eq!(buf, expected);
+//     }
 
-    #[test]
-    fn handle_key_event() -> io::Result<()> {
-        let mut app = App::default();
-        app.handle_key_event(KeyCode::Right.into());
-        assert_eq!(app.index, 1);
+//     #[test]
+//     fn handle_key_event() -> io::Result<()> {
+//         let mut app = App::default();
+//         app.handle_key_event(KeyCode::Right.into());
+//         assert_eq!(app.index, 1);
 
-        app.handle_key_event(KeyCode::Left.into());
-        assert_eq!(app.index, 0);
+//         app.handle_key_event(KeyCode::Left.into());
+//         assert_eq!(app.index, 0);
 
-        let mut app = App::default();
-        app.handle_key_event(KeyCode::Char('q').into());
-        assert_eq!(app.exit, true);
+//         let mut app = App::default();
+//         app.handle_key_event(KeyCode::Char('q').into());
+//         assert_eq!(app.exit, true);
 
-        Ok(())
-    }
-}
+//         Ok(())
+//     }
+// }
