@@ -8,7 +8,7 @@ use ratatui::{
 };
 use std::io;
 use std::process::Command;
-use std::{cmp::min, env};
+use std::{cmp::max, cmp::min, env};
 
 #[derive(Debug, Default)]
 pub struct App {
@@ -97,7 +97,8 @@ impl App {
             .enumerate()
             .for_each(|(ind, branch)| {
                 if ind == self.index as usize {
-                    visible_branches.push(ListItem::new(Line::from(branch.to_string().on_yellow())));
+                    visible_branches
+                        .push(ListItem::new(Line::from(branch.to_string().on_yellow())));
                 } else {
                     visible_branches.push(ListItem::new(Line::from(branch.to_string())));
                 }
@@ -179,13 +180,18 @@ fn wagner_fischer(pattern: &Vec<char>, text: &Vec<char>) -> i32 {
     for y in 1..=pattern.len() {
         for x in 1..=text.len() {
             let cost = if pattern[y - 1] == text[x - 1] { 0 } else { 1 };
+
             let new_top_left = table[x];
-            table[x] = min(top_left + cost, min(table[x - 1] + 1, table[x]) + 1);
+            table[x] = min(top_left + cost, min(table[x - 1] + 1, table[x] + 1));
             top_left = new_top_left;
         }
     }
 
-    table[table.len() - 1] - text.len() as i32
+    // NOTE: currently the algo does not care if letters are next to another.
+    //       Improve acc by increasing score if matching letters are in a row?
+
+    let diff = table[table.len() - 1];
+    ((1.0 * diff as f32 / text.len() as f32) * 1000.0) as i32
 }
 
 fn main() -> io::Result<()> {
