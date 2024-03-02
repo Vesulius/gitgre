@@ -13,6 +13,7 @@ use std::{cmp::min, env};
 #[derive(Debug, Default)]
 pub struct App {
     index: u32,
+    current_branch: String,
     searchterm: String,
     all_branches: Vec<String>,
     found_branches: Vec<String>,
@@ -21,10 +22,11 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(branches: Vec<String>, searchterm: Option<String>) -> Self {
+    pub fn new(branches: Vec<String>, searchterm: Option<String>, current_branch: String) -> Self {
         App {
             index: 0,
             searchterm: searchterm.unwrap_or_default(),
+            current_branch,
             all_branches: branches.clone(),
             found_branches: branches,
             exit: false,
@@ -48,6 +50,12 @@ impl App {
             .split(frame.size());
 
         let title = Title::from(" GITGRE ".bold());
+        let current_branch = Title::from(Line::from(vec![format!(
+            " {} ",
+            self.current_branch.clone()
+        )
+        .blue()
+        .bold()]));
         let instructions = Title::from(Line::from(vec![
             " move up ".into(),
             "<UP>".blue().bold(),
@@ -61,15 +69,20 @@ impl App {
             .borders(Borders::ALL)
             .border_set(border::PLAIN);
 
-        let search_content = Paragraph::new(Text::styled(
-            self.searchterm.to_string(),
-            Style::default().fg(Color::Blue),
-        ))
+        let search_content = Paragraph::new(Line::from(vec![
+            Span::from(self.searchterm.clone()),
+            Span::styled(" ", Style::default().bg(Color::Gray)),
+        ]))
         .block(search_block);
 
         frame.render_widget(search_content, chunks[0]);
 
         let branches_block = Block::default()
+            .title(
+                current_branch
+                    .alignment(Alignment::Center)
+                    .position(Position::Top),
+            )
             .title(
                 instructions
                     .alignment(Alignment::Center)
@@ -84,7 +97,7 @@ impl App {
             .enumerate()
             .for_each(|(ind, branch)| {
                 if ind == self.index as usize {
-                    visible_branches.push(ListItem::new(Line::from(branch.to_string().on_red())));
+                    visible_branches.push(ListItem::new(Line::from(branch.to_string().on_yellow())));
                 } else {
                     visible_branches.push(ListItem::new(Line::from(branch.to_string())));
                 }
@@ -197,16 +210,19 @@ fn wagner_fischer(pattern: &Vec<char>, text: &Vec<char>) -> i32 {
 
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
-    // println!("{:?}", args);
+    let mut current_branch = String::new();
 
     let output = Command::new("/usr/bin/git").arg("branch").output()?;
-    // println!("status: {}", output.status);
-    // println!("stdout: {}", String::from_utf8_lossy(&output.stdout));
-    // println!("stderr: {}", String::from_utf8_lossy(&output.stderr));
-
     let output_lines: Vec<String> = String::from_utf8_lossy(&output.stdout)
         .split_terminator('\n')
-        .filter(|l| !l.starts_with('*'))
+        .filter(|l| {
+            if l.starts_with('*') {
+                current_branch = l.to_string();
+                false
+            } else {
+                true
+            }
+        })
         .map(|l| l.trim().to_string())
         .collect();
 
@@ -219,7 +235,7 @@ fn main() -> io::Result<()> {
     }
 
     let mut terminal = tui::init()?;
-    let mut app = App::new(output_lines, args.get(1).cloned());
+    let mut app = App::new(output_lines, args.get(1).cloned(), current_branch);
     let app_result: Result<bool, io::Error> = app.run(&mut terminal);
     tui::restore()?;
     match app_result {
