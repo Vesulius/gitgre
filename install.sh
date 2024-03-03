@@ -1,6 +1,6 @@
 #!/bin/bash
 
-git clone git@github.com:Vesulius/gitgre.git
+git clone https://github.com/Vesulius/gitgre.git
 cd gitgre
 cargo build --release
 mkdir ~/.local/bin 2>/dev/null
@@ -21,3 +21,4 @@ fi
 
 cd ..
 rm -fr gitgre
+rm ./install.sh
