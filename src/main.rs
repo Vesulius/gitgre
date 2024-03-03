@@ -212,11 +212,12 @@ fn main() -> io::Result<()> {
         .map(|l| l.trim().to_string())
         .collect();
 
-    if output_lines.len() == 1 {
-        println!("You only have one branch {}", output_lines[0]);
-        return Ok(());
-    } else if output_lines.is_empty() {
-        println!("You don't have any branches");
+    if output_lines.is_empty() {
+        if current_branch == String::new() {
+            println!("You don't have any branches");
+        } else {
+            println!("You only have the current branch {}", current_branch);
+        }
         return Ok(());
     }
 
