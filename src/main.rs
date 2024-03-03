@@ -8,7 +8,7 @@ use ratatui::{
 };
 use std::io;
 use std::process::Command;
-use std::{cmp::max, cmp::min, env};
+use std::{cmp::min, env};
 
 #[derive(Debug, Default)]
 pub struct App {
