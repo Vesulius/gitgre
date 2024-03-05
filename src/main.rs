@@ -46,7 +46,10 @@ impl App {
     fn render_frame(&self, frame: &mut Frame) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Length(3), Constraint::Min(1)])
+            .constraints([
+                Constraint::Min(1),
+                Constraint::Length(3)
+            ])
             .split(frame.size());
 
         let title = Title::from(" GITGRE ".bold());
@@ -64,20 +67,11 @@ impl App {
             " select ".into(),
             "<ENTER>".blue().bold(),
         ]));
-        let search_block = Block::default()
+        let branches_block = Block::default()
             .title(title.alignment(Alignment::Center))
             .borders(Borders::ALL)
             .border_set(border::PLAIN);
-
-        let search_content = Paragraph::new(Line::from(vec![
-            Span::from(self.searchterm.clone()),
-            Span::styled(" ", Style::default().bg(Color::Gray)),
-        ]))
-        .block(search_block);
-
-        frame.render_widget(search_content, chunks[0]);
-
-        let branches_block = Block::default()
+        let search_block = Block::default()
             .title(
                 current_branch
                     .alignment(Alignment::Center)
@@ -90,6 +84,15 @@ impl App {
             )
             .borders(Borders::ALL)
             .border_set(border::PLAIN);
+
+        let search_content = Paragraph::new(Line::from(vec![
+            Span::from(self.searchterm.clone()),
+            Span::styled(" ", Style::default().bg(Color::Gray)),
+        ]))
+        .block(search_block);
+
+        frame.render_widget(search_content, chunks[1]);
+
 
         let mut visible_branches = Vec::<ListItem>::new();
         self.found_branches
@@ -105,7 +108,7 @@ impl App {
             });
         let branches = List::new(visible_branches).block(branches_block);
 
-        frame.render_widget(branches, chunks[1])
+        frame.render_widget(branches, chunks[0])
     }
 
     fn handle_key_event(&mut self, key_event: KeyEvent) {
