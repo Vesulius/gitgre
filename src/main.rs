@@ -6,9 +6,9 @@ use ratatui::{
     symbols::border,
     widgets::{block::*, *},
 };
-use std::io;
 use std::process::Command;
 use std::{cmp::min, env};
+use std::io;
 
 #[derive(Debug, Default)]
 pub struct App {
@@ -34,22 +34,23 @@ impl App {
         }
     }
 
-    pub fn run(&mut self, terminal: &mut tui::Tui) -> io::Result<bool> {
+    pub fn run(&mut self, terminal: &mut tui::Tui) -> io::Result<String> {
         while !self.exit {
             terminal.draw(|frame| self.render_frame(frame))?;
             self.handle_events()?;
             self.update_search();
         }
-        Ok(self.selected)
+        if self.selected {
+            Ok(self.found_branches[self.index as usize].clone())
+        } else {
+            Ok(String::new())
+        }
     }
 
     fn render_frame(&self, frame: &mut Frame) {
         let chunks = Layout::default()
             .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Min(1),
-                Constraint::Length(3)
-            ])
+            .constraints([Constraint::Min(1), Constraint::Length(3)])
             .split(frame.size());
 
         let title = Title::from(" GITGRE ".bold());
@@ -92,7 +93,6 @@ impl App {
         .block(search_block);
 
         frame.render_widget(search_content, chunks[1]);
-
 
         let mut visible_branches = Vec::<ListItem>::new();
         self.found_branches
@@ -197,12 +197,24 @@ fn wagner_fischer(pattern: &Vec<char>, text: &Vec<char>) -> i32 {
     ((1.0 * diff as f32 / text.len() as f32) * 1000.0) as i32
 }
 
+fn run_tui(
+    branches: Vec<String>,
+    searchterm: Option<String>,
+    current_branch: String,
+) -> Result<String, io::Error> {
+    let mut terminal = tui::init()?;
+    let mut app = App::new(branches, searchterm, current_branch);
+    let app_result: Result<String, io::Error> = app.run(&mut terminal);
+    tui::restore()?;
+    app_result
+}
+
 fn main() -> io::Result<()> {
     let args: Vec<String> = env::args().collect();
     let mut current_branch = String::new();
 
     let output = Command::new("/usr/bin/git").arg("branch").output()?;
-    let output_lines: Vec<String> = String::from_utf8_lossy(&output.stdout)
+    let branches: Vec<String> = String::from_utf8_lossy(&output.stdout)
         .split_terminator('\n')
         .filter(|l| {
             if l.starts_with('*') {
@@ -215,7 +227,7 @@ fn main() -> io::Result<()> {
         .map(|l| l.trim().to_string())
         .collect();
 
-    if output_lines.is_empty() {
+    if branches.is_empty() {
         if current_branch == String::new() {
             println!("You don't have any branches");
         } else {
@@ -224,17 +236,28 @@ fn main() -> io::Result<()> {
         return Ok(());
     }
 
-    let mut terminal = tui::init()?;
-    let mut app = App::new(output_lines, args.get(1).cloned(), current_branch);
-    let app_result: Result<bool, io::Error> = app.run(&mut terminal);
-    tui::restore()?;
-    match app_result {
+    let res: Result<String, io::Error> = if let Some(searchterm) = args.get(1) {
+        let matches: Vec<&String> = branches.iter().filter(|b| b.contains(searchterm)).collect();
+        if matches.len() == 1 {
+            Ok(matches[0].clone())
+        } else {
+            run_tui(branches, Some(searchterm.clone()), current_branch)
+        }
+    } else {
+        run_tui(branches, None, current_branch)
+    };
+
+    match res {
         Ok(selected) => {
-            if selected {
-                Command::new("/usr/bin/git")
+            if selected != String::new() {
+                let output: std::process::Child = Command::new("/usr/bin/git") 
                     .arg("checkout")
-                    .arg::<String>(app.found_branches[app.index as usize].clone())
-                    .output()?;
+                    .arg::<String>(selected)
+                    .spawn()
+                    .expect("Error when running 'git checkout'");
+                if let Some(msg) = output.stdout {
+                    println!("{:?}", msg)
+                }
             }
             Ok(())
         }
